@@ -12,12 +12,27 @@ from torch.utils.data import Dataset, DataLoader
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+def get_model(exp_dict):
+    if exp_dict['model']['name'] == 'resnext':
+        return Resnext(exp_dict)
+    else:
+        return Resnet(exp_dict).network
+
+def get_optimizer(exp_dict, model):
+    opt_dict = exp_dict['opt']
+    if opt_dict['name'] == 'adamW':
+        return torch.optim.AdamW(
+            model.parameters(), lr=opt_dict['lr'], weight_decay=opt_dict['wd']
+        )
+    else:
+        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+
+
 class Model:
     def __init__(self, exp_dict):
-        self.network = torchvision.models.resnet152()
-        self.network.fc = nn.Linear(2048, 5, bias=True)
+        self.network = get_model(exp_dict)
         self.network.to(DEVICE)
-        self.opt = torch.optim.Adam(self.network.parameters(), lr=exp_dict['lr'])
+        self.opt = get_optimizer(exp_dict, self.network)
 
     def train_on_loader(self, loader):
         self.network.train()
@@ -75,3 +90,24 @@ class Model:
         sub.head()        
 
         sub.to_csv("submission.csv", index=False)
+
+class Resnet():
+    def __init__(self, exp_dict):
+        self.network = torchvision.models.resnet152()
+        self.network.fc = nn.Linear(2048, 5, bias=True)
+
+
+class Resnext(nn.Module):
+    def __init__(self, exp_dict):
+        super().__init__()
+        self.model = torch.hub.load(
+            "facebookresearch/semi-supervised-ImageNet1K-models", exp_dict['model']['name']
+        )
+        self.model = nn.Sequential(*list(self.model.children())[:-2])
+        in_features = getattr(self.model, "fc").in_features
+        self.classifier = nn.Linear(in_features, 5)
+    
+    def forward(self, x):
+        features = self.pool_type(self.backbone(x), 1)
+        features = features.view(x.size(0), -1)
+        return self.classifier(features)

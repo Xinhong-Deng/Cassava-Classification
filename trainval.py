@@ -106,7 +106,7 @@ def trainval(exp_dict, savedir, args):
         hu.save_pkl(score_list_path, score_list)
         print("Checkpoint Saved: %s" % savedir)
 
-    print('Experiment completed et epoch %d' % test_dict['epoch'])
+    print('Experiment completed et epoch %d' % score_dict['epoch'])
 
 
 if __name__ == "__main__":
