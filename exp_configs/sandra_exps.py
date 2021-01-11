@@ -12,7 +12,7 @@ EXP_GROUPS['resnet'] = hu.cartesian_exp_group({
 
 EXP_GROUPS['resnext'] = hu.cartesian_exp_group({
                         'batch_size': 32,
-                        'opt': {'lr': 0.0001, 'wd': 1e-6},
-                        'model': {'name': 'resnext'},
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'resnext50_32x4d_ssl'},
                         'max_epoch': [20]
                         })

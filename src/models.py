@@ -13,7 +13,7 @@ from torch.utils.data import Dataset, DataLoader
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def get_model(exp_dict):
-    if exp_dict['model']['name'] == 'resnext':
+    if 'resnext' in exp_dict['model']['name'] :
         return Resnext(exp_dict)
     else:
         return Resnet(exp_dict).network
@@ -100,12 +100,15 @@ class Resnet():
 class Resnext(nn.Module):
     def __init__(self, exp_dict):
         super().__init__()
-        self.model = torch.hub.load(
+        backbone = torch.hub.load(
             "facebookresearch/semi-supervised-ImageNet1K-models", exp_dict['model']['name']
         )
-        self.model = nn.Sequential(*list(self.model.children())[:-2])
-        in_features = getattr(self.model, "fc").in_features
+        self.backbone = nn.Sequential(*list(backbone.children())[:-2])
+        in_features = getattr(backbone, "fc").in_features
         self.classifier = nn.Linear(in_features, 5)
+
+        import torch.nn.functional as F
+        self.pool_type = F.adaptive_avg_pool2d
     
     def forward(self, x):
         features = self.pool_type(self.backbone(x), 1)
