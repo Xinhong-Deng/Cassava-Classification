@@ -22,3 +22,10 @@ EXP_GROUPS['resnext'] = hu.cartesian_exp_group({
                         'loss_func': loss_functions,
                         'max_epoch': [50]
                         })
+
+EXP_GROUPS['bitempered'] = hu.cartesian_exp_group({
+                        'batch_size': 32,
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'resnext50_32x4d_ssl'},
+                        'max_epoch': [30]
+                        })
