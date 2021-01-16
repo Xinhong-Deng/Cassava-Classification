@@ -3,9 +3,9 @@ import itertools, copy
 
 EXP_GROUPS = {}
 
-symmetric_cross_entropy = {'name': 'symmetric_cross_entropy', 'alpha': 0.1, 'beta': 1.0}
-cross_entropy = {'name': 'cross_entropy'}
-loss_functions = [symmetric_cross_entropy, cross_entropy]
+symmetric_cross_entropy = [{'name': 'symmetric_cross_entropy', 'alpha': alpha, 'beta': beta} for alpha in [0.1, 0.01, 1] for beta in [1, 0.5, 5]]
+cross_entropy = [{'name': 'cross_entropy'}]
+loss_functions = symmetric_cross_entropy + cross_entropy
 
 EXP_GROUPS['resnet'] = hu.cartesian_exp_group({
                         'batch_size': 32,
