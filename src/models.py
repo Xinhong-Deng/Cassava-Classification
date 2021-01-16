@@ -3,6 +3,7 @@ import pandas as pd
 import json
 from PIL import Image
 import os, tqdm
+from torch.nn.modules.loss import CrossEntropyLoss
 
 import torch
 import torch.nn as nn
@@ -15,6 +16,8 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 def get_model(exp_dict):
     if 'resnext' in exp_dict['model']['name'] :
         return Resnext(exp_dict)
+    elif exp_dict['model']['name'] == 'resnet':
+        return Resnet(exp_dict).network
     else:
         return Resnet(exp_dict).network
 
@@ -24,8 +27,18 @@ def get_optimizer(exp_dict, model):
         return torch.optim.AdamW(
             model.parameters(), lr=opt_dict['lr'], weight_decay=opt_dict['wd']
         )
+    elif opt_dict['name'] == 'adam':
+        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
     else:
         return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+
+def get_criterion(exp_dict):
+    if exp_dict['loss_func']['name'] == 'symmetric_cross_entropy':
+        return SymmetricCrossEntropy(exp_dict)
+    elif exp_dict['loss_func']['name'] == 'cross_entropy':
+        return nn.CrossEntropyLoss()
+    else:
+        return nn.CrossEntropyLoss()
 
 
 class Model:
@@ -33,6 +46,7 @@ class Model:
         self.network = get_model(exp_dict)
         self.network.to(DEVICE)
         self.opt = get_optimizer(exp_dict, self.network)
+        self.criterion = get_criterion(exp_dict)
 
     def train_on_loader(self, loader):
         self.network.train()
@@ -44,7 +58,7 @@ class Model:
             labels = labels.to(DEVICE)
 
             logits = self.network(images)
-            loss = nn.CrossEntropyLoss()(logits, labels)
+            loss = self.criterion(logits, labels)
 
             self.opt.zero_grad()
             loss.backward()
@@ -114,3 +128,24 @@ class Resnext(nn.Module):
         features = self.pool_type(self.backbone(x), 1)
         features = features.view(x.size(0), -1)
         return self.classifier(features)
+
+
+import torch.nn.functional as F
+# ref: https://www.kaggle.com/c/cassava-leaf-disease-classification/discussion/208239
+class SymmetricCrossEntropy(nn.Module):
+
+    def __init__(self, exp_dict):
+        super(SymmetricCrossEntropy, self).__init__()
+        self.alpha = exp_dict['loss_func']['alpha']
+        self.beta = exp_dict['loss_func']['beta']
+        self.num_classes = 5
+
+    def forward(self, logits, targets, reduction='mean'):
+        onehot_targets = torch.eye(self.num_classes)[targets].cuda()
+        ce_loss = F.cross_entropy(logits, targets, reduction=reduction)
+        rce_loss = (-onehot_targets*logits.softmax(1).clamp(1e-7, 1.0).log()).sum(1)
+        if reduction == 'mean':
+            rce_loss = rce_loss.mean()
+        elif reduction == 'sum':
+            rce_loss = rce_loss.sum()
+        return self.alpha * ce_loss + self.beta * rce_loss
