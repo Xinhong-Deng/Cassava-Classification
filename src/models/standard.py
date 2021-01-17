@@ -13,37 +13,14 @@ from torch.utils.data import Dataset, DataLoader
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def get_model(exp_dict):
-    if 'resnext' in exp_dict['model']['name'] :
-        return Resnext(exp_dict)
-    elif exp_dict['model']['name'] == 'resnet':
-        return Resnet(exp_dict).network
-    else:
-        return Resnet(exp_dict).network
-
-def get_optimizer(exp_dict, model):
-    opt_dict = exp_dict['opt']
-    if opt_dict['name'] == 'adamW':
-        return torch.optim.AdamW(
-            model.parameters(), lr=opt_dict['lr'], weight_decay=opt_dict['wd']
-        )
-    elif opt_dict['name'] == 'adam':
-        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
-    else:
-        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
-
-def get_criterion(exp_dict):
-    if exp_dict['loss_func']['name'] == 'symmetric_cross_entropy':
-        return SymmetricCrossEntropy(exp_dict)
-    elif exp_dict['loss_func']['name'] == 'cross_entropy':
-        return nn.CrossEntropyLoss()
-    else:
-        return nn.CrossEntropyLoss()
-
-
-class Model:
+class StandardModel:
     def __init__(self, exp_dict):
-        self.network = get_model(exp_dict)
+        if 'resnext' in exp_dict['model']['name'] :
+            self.network = Resnext(exp_dict)
+        elif exp_dict['model']['name'] == 'resnet':
+            self.network = Resnet(exp_dict).network
+        else:
+            self.network = Resnet(exp_dict).network
         self.network.to(DEVICE)
         self.opt = get_optimizer(exp_dict, self.network)
         self.criterion = get_criterion(exp_dict)
@@ -104,6 +81,31 @@ class Model:
         sub.head()        
 
         sub.to_csv("submission.csv", index=False)
+
+
+def get_optimizer(exp_dict, model):
+    opt_dict = exp_dict['opt']
+    if opt_dict['name'] == 'adamW':
+        return torch.optim.AdamW(
+            model.parameters(), lr=opt_dict['lr'], weight_decay=opt_dict['wd']
+        )
+    elif opt_dict['name'] == 'adam':
+        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+    else:
+        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+
+def get_criterion(exp_dict):
+    if exp_dict['loss_func']['name'] == 'symmetric_cross_entropy':
+        return SymmetricCrossEntropy(exp_dict)
+    elif exp_dict['loss_func']['name'] == 'cross_entropy':
+        return nn.CrossEntropyLoss()
+    else:
+        return nn.CrossEntropyLoss()
+
+# Networks
+# -------
+
+
 
 class Resnet():
     def __init__(self, exp_dict):

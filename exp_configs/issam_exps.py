@@ -6,6 +6,14 @@ EXP_GROUPS = {}
 
 EXP_GROUPS['starter_issam'] = hu.cartesian_exp_group({
                         'batch_size': 32,
-                        'lr': 0.0001,
-                        'max_epoch': [20]
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'resnext50_32x4d_ssl'},
+                        'loss_func': {'name': 'cross_entropy'},
+                        'max_epoch': [50]
+                        })
+
+EXP_GROUPS['clip'] = hu.cartesian_exp_group({
+                        'batch_size': 32,
+                        'model': {'name': 'clip'},
+                        'max_epoch': [30],
                         })
