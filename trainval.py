@@ -60,7 +60,7 @@ def trainval(exp_dict, savedir, args):
 
     # Model
     # ==================
-    model = models.Model(exp_dict)
+    model = models.get_model(exp_dict)
 
     model_path = os.path.join(savedir, "model.pth")
     score_list_path = os.path.join(savedir, "score_list.pkl")

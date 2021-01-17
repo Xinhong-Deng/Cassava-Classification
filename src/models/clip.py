@@ -10,44 +10,17 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
-import timm
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-def get_model(exp_dict):
-    if 'resnext' in exp_dict['model']['name'] :
-        return Resnext(exp_dict)
-    elif exp_dict['model']['name'] == 'resnet':
-        return Resnet(exp_dict).network
-    elif 'efficientnet' in exp_dict['model']['name']:
-        return EfficientNet(exp_dict)
-    else:
-        return Resnet(exp_dict).network
-
-def get_optimizer(exp_dict, model):
-    opt_dict = exp_dict['opt']
-    if opt_dict['name'] == 'adamW':
-        return torch.optim.AdamW(
-            model.parameters(), lr=opt_dict['lr'], weight_decay=opt_dict['wd']
-        )
-    elif opt_dict['name'] == 'adam':
-        wd = 0 if 'wd' not in opt_dict.keys() else opt_dict['wd']
-        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'], weight_decay=wd)
-    else:
-        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
-
-def get_criterion(exp_dict):
-    if exp_dict['loss_func']['name'] == 'symmetric_cross_entropy':
-        return SymmetricCrossEntropy(exp_dict)
-    elif exp_dict['loss_func']['name'] == 'cross_entropy':
-        return nn.CrossEntropyLoss()
-    else:
-        return nn.CrossEntropyLoss()
-
-
-class Model:
+class ClipModel:
     def __init__(self, exp_dict):
-        self.network = get_model(exp_dict)
+        if 'resnext' in exp_dict['model']['name'] :
+            self.network = Resnext(exp_dict)
+        elif exp_dict['model']['name'] == 'resnet':
+            self.network = Resnet(exp_dict).network
+        else:
+            self.network = Resnet(exp_dict).network
         self.network.to(DEVICE)
         self.opt = get_optimizer(exp_dict, self.network)
         self.criterion = get_criterion(exp_dict)
@@ -109,6 +82,31 @@ class Model:
 
         sub.to_csv("submission.csv", index=False)
 
+
+def get_optimizer(exp_dict, model):
+    opt_dict = exp_dict['opt']
+    if opt_dict['name'] == 'adamW':
+        return torch.optim.AdamW(
+            model.parameters(), lr=opt_dict['lr'], weight_decay=opt_dict['wd']
+        )
+    elif opt_dict['name'] == 'adam':
+        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+    else:
+        return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+
+def get_criterion(exp_dict):
+    if exp_dict['loss_func']['name'] == 'symmetric_cross_entropy':
+        return SymmetricCrossEntropy(exp_dict)
+    elif exp_dict['loss_func']['name'] == 'cross_entropy':
+        return nn.CrossEntropyLoss()
+    else:
+        return nn.CrossEntropyLoss()
+
+# Networks
+# -------
+
+
+
 class Resnet():
     def __init__(self, exp_dict):
         self.network = torchvision.models.resnet152()
@@ -128,35 +126,11 @@ class Resnext(nn.Module):
         import torch.nn.functional as F
         self.pool_type = F.adaptive_avg_pool2d
 
-
-    
     def forward(self, x):
         features = self.pool_type(self.backbone(x), 1)
         features = features.view(x.size(0), -1)
         return self.classifier(features)
 
-
-# ref: https://www.kaggle.com/khyeh0719/pytorch-efficientnet-baseline-train-amp-aug
-class EfficientNet(nn.Module):
-    def __init__(self, exp_config):
-        super().__init__()
-        self.model = timm.create_model(exp_config['model']['name'], pretrained=True)
-        n_features = self.model.classifier.in_features
-        self.model.classifier = nn.Linear(n_features, 5)
-        '''
-        self.model.classifier = nn.Sequential(
-            nn.Dropout(0.3),
-            #nn.Linear(n_features, hidden_size,bias=True), nn.ELU(),
-            nn.Linear(n_features, n_class, bias=True)
-        )
-        '''
-    def forward(self, x):
-        x = self.model(x)
-        return x
-
-
-
-# ================= loss ====================
 
 import torch.nn.functional as F
 # ref: https://www.kaggle.com/c/cassava-leaf-disease-classification/discussion/208239
