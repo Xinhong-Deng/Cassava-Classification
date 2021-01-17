@@ -125,7 +125,7 @@ class Resnext(nn.Module):
 
         import torch.nn.functional as F
         self.pool_type = F.adaptive_avg_pool2d
-    
+
     def forward(self, x):
         features = self.pool_type(self.backbone(x), 1)
         features = features.view(x.size(0), -1)

@@ -15,7 +15,7 @@ from .standard import StandardModel
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def get_model(exp_dict):
-    if exp_dict['model']['name'] in ['resnet', 'resnext', 'resnext50_32x4d_ssl']:
+    if exp_dict['model']['name'] in ['resnet', 'resnext', 'resnext50_32x4d_ssl', 'tf_efficientnet_b4_ns']:
         return StandardModel(exp_dict)
     elif exp_dict['model']['name'] in ['clip']:
         return ClipModel(exp_dict)

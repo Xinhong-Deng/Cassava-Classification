@@ -19,6 +19,8 @@ class StandardModel:
             self.network = Resnext(exp_dict)
         elif exp_dict['model']['name'] == 'resnet':
             self.network = Resnet(exp_dict).network
+        elif 'efficientnet' in exp_dict['model']['name']:
+            self.network = EfficientNet(exp_dict)
         else:
             self.network = Resnet(exp_dict).network
         self.network.to(DEVICE)
@@ -130,6 +132,25 @@ class Resnext(nn.Module):
         features = self.pool_type(self.backbone(x), 1)
         features = features.view(x.size(0), -1)
         return self.classifier(features)
+
+
+# ref: https://www.kaggle.com/khyeh0719/pytorch-efficientnet-baseline-train-amp-aug
+class EfficientNet(nn.Module):
+    def __init__(self, exp_config):
+        super().__init__()
+        self.model = timm.create_model(exp_config['model']['name'], pretrained=True)
+        n_features = self.model.classifier.in_features
+        self.model.classifier = nn.Linear(n_features, 5)
+        '''
+        self.model.classifier = nn.Sequential(
+            nn.Dropout(0.3),
+            #nn.Linear(n_features, hidden_size,bias=True), nn.ELU(),
+            nn.Linear(n_features, n_class, bias=True)
+        )
+        '''
+    def forward(self, x):
+        x = self.model(x)
+        return x
 
 
 import torch.nn.functional as F
