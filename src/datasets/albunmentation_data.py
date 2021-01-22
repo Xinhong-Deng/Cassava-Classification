@@ -15,7 +15,7 @@ def get_transform(transform_dict):
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
             A.ShiftScaleRotate(p=0.5),
-            A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit=0.2, val_shift_limit=0.2, p=0.5),
+            # A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit=0.2, val_shift_limit=0.2, p=0.5),
             A.RandomBrightnessContrast(brightness_limit=(-0.1,0.1), contrast_limit=(-0.1, 0.1), p=0.5),
             A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], max_pixel_value=255.0, p=1.0),
             A.CoarseDropout(p=0.5),
@@ -44,11 +44,11 @@ def get_transform(transform_dict):
                 val_shift_limit=0.2, 
                 p=0.5
             ),
-        A.RandomBrightnessContrast(
-                brightness_limit=(-0.1,0.1), 
-                contrast_limit=(-0.1, 0.1), 
-                p=0.5
-            ),
+        # A.RandomBrightnessContrast(
+        #         brightness_limit=(-0.1,0.1), 
+        #         contrast_limit=(-0.1, 0.1), 
+        #         p=0.5
+        #     ),
         A.Normalize(
                 mean=[0.485, 0.456, 0.406], 
                 std=[0.229, 0.224, 0.225], 
@@ -58,6 +58,21 @@ def get_transform(transform_dict):
         A.CoarseDropout(p=0.5),
         A.Cutout(p=0.5),
         ToTensorV2()], p=1.)
+    elif transform_dict['name'] == 'tf4':
+        # https://www.kaggle.com/khyeh0719/pytorch-efficientnet-baseline-train-amp-aug
+        return A.Compose([
+            A.RandomResizedCrop(IM_SIZE, IM_SIZE),
+            A.Transpose(p=0.5),
+            A.HorizontalFlip(p=0.5),
+            A.VerticalFlip(p=0.5),
+            A.ShiftScaleRotate(p=0.5),
+            A.HueSaturationValue(hue_shift_limit=0.2, sat_shift_limit=0.2, val_shift_limit=0.2, p=0.5),
+            A.RandomBrightnessContrast(brightness_limit=(-0.1,0.1), contrast_limit=(-0.1, 0.1), p=0.5),
+            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], max_pixel_value=255.0, p=1.0),
+            A.CoarseDropout(p=0.5),
+            A.Cutout(p=0.5),
+            ToTensorV2(p=1.0),
+        ], p=1.)
     else:
         return A.Compose([
             A.CenterCrop(IM_SIZE, IM_SIZE, p=1.),
