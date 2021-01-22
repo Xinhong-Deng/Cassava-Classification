@@ -24,7 +24,7 @@ def get_data(Dir, FNames, Labels, exp_dict, isTrain=True):
     elif transform_dict['name'] == 'default':
        return GetData(Dir, FNames, Labels, Transform_dict=transform_dict)
     else:
-        return None
+        return GetData(Dir, FNames, Labels, Transform_dict={'name': 'default'})
 
 
 def get_loader(split, exp_dict, datadir='../input/cassava-leaf-disease-classification'):
