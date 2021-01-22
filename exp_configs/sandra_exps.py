@@ -45,3 +45,24 @@ EXP_GROUPS['bitempered'] = hu.cartesian_exp_group({
                         'model': {'name': 'resnext50_32x4d_ssl'},
                         'max_epoch': [30]
                         })
+
+efficientnet_smaller_batch = [{
+                        'batch_size': 20,
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'tf_efficientnet_b4_ns'},
+                        'loss_func': cross_entropy[0],
+                        'max_epoch': 30,
+                        'train_transform': {'name': 'tf4', 'im_size': 512},
+                        'val_transform': {'name': 'tf2', 'im_size': 512},
+}]
+
+EXP_GROUPS['transform'] = hu.cartesian_exp_group({
+                        'batch_size': 20,
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'resnext50_32x4d_ssl'},
+                        'loss_func': cross_entropy,
+                        'max_epoch': [30],
+                        'train_transform': [{'name': tf_name, 'im_size': 512} for tf_name in ['tf1', 'tf3']],
+                        'val_transform': {'name': 'tf2', 'im_size': 512},
+})
+# }) + efficientnet_smaller_batch

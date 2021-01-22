@@ -10,6 +10,7 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
+import timm
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
