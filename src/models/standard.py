@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 import pandas as pd
 import json
 from PIL import Image
@@ -22,6 +22,8 @@ class StandardModel:
             self.network = Resnet(exp_dict).network
         elif 'efficientnet' in exp_dict['model']['name']:
             self.network = EfficientNet(exp_dict)
+        elif 'spiralcnn' in exp_dict['model']['name']:
+            self.network = SpinalCNN(exp_dict)
         else:
             self.network = Resnet(exp_dict).network
         self.network.to(DEVICE)
@@ -46,7 +48,7 @@ class StandardModel:
 
             loss_sum += float(loss)
             loss_samples += images.shape[0]
-            
+
         return {'train_loss':loss_sum / loss_samples}
 
     @torch.no_grad()
@@ -55,33 +57,33 @@ class StandardModel:
 
         acc_sum = 0.0
         acc_samples = 0.
-        for (images, labels) in tqdm.tqdm(loader, desc='Validating'): 
+        for (images, labels) in tqdm.tqdm(loader, desc='Validating'):
             image = images.to(DEVICE)
-            
-            logits = self.network(image)     
-            preds = logits.argmax(dim=1)
-            
-            acc_sum += float((preds.cpu() == labels).sum())
-            acc_samples += labels.shape[0] 
 
-        return {'val_acc': acc_sum/acc_samples }  
+            logits = self.network(image)
+            preds = logits.argmax(dim=1)
+
+            acc_sum += float((preds.cpu() == labels).sum())
+            acc_samples += labels.shape[0]
+
+        return {'val_acc': acc_sum/acc_samples }
 
     @torch.no_grad()
     def test_on_loader(self, loader):
         self.network.eval()
         s_ls = []
 
-        for image, fname in tqdm.tqdm(loader, desc='Testing'): 
+        for image, fname in tqdm.tqdm(loader, desc='Testing'):
             image = image.to(DEVICE)
-            
-            logits = self.network(image)        
+
+            logits = self.network(image)
             preds = logits.argmax(dim=1)
-            
+
             for pred in preds:
                 s_ls.append([fname[0], pred.item()])
-                    
+
         sub = pd.DataFrame.from_records(s_ls, columns=['image_id', 'label'])
-        sub.head()        
+        sub.head()
 
         sub.to_csv("submission.csv", index=False)
 
@@ -103,7 +105,7 @@ def get_criterion(exp_dict):
     elif exp_dict['loss_func']['name'] == 'cross_entropy':
         return nn.CrossEntropyLoss()
     elif exp_dict['loss_func']['name'] == 'bitempered':
-        return
+        return bi_tempered_logistic_loss(exp_dict)
     else:
         return nn.CrossEntropyLoss()
 
@@ -130,7 +132,7 @@ class Resnext(nn.Module):
 
         import torch.nn.functional as F
         self.pool_type = F.adaptive_avg_pool2d
-    
+
     def forward(self, x):
         features = self.pool_type(self.backbone(x), 1)
         features = features.view(x.size(0), -1)
