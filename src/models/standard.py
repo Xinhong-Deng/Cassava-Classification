@@ -154,6 +154,86 @@ class EfficientNet(nn.Module):
         return x
 
 
+class SpinalCNN(nn.Module):
+    """CNN."""
+
+    def __init__(self, exp_dict):
+        """CNN Builder."""
+        super(SpinalCNN, self).__init__()
+        self.Half_width = 2048
+        self.layer_width = 128
+        self.conv_layer = nn.Sequential(
+
+            # Conv Layer block 1
+            nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            # Conv Layer block 2
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout2d(p=0.05),
+
+            # Conv Layer block 3
+            nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=256, out_channels=256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+
+        self.fc_spinal_layer1 = nn.Sequential(
+            nn.Dropout(p=0.1), nn.Linear(self.Half_width, self.layer_width),
+            nn.ReLU(inplace=True),
+        )
+        self.fc_spinal_layer2 = nn.Sequential(
+            nn.Dropout(p=0.1), nn.Linear(self.Half_width + self.layer_width, self.layer_width),
+            nn.ReLU(inplace=True),
+        )
+        self.fc_spinal_layer3 = nn.Sequential(
+            nn.Dropout(p=0.1), nn.Linear(self.Half_width + self.layer_width, self.layer_width),
+            nn.ReLU(inplace=True),
+        )
+        self.fc_spinal_layer4 = nn.Sequential(
+            nn.Dropout(p=0.1), nn.Linear(self.Half_width + self.layer_width, self.layer_width),
+            nn.ReLU(inplace=True),
+        )
+        self.fc_out = nn.Sequential(
+            nn.Dropout(p=0.1), nn.Linear(self.layer_width * 4, 10)
+        )
+
+    def forward(self, x):
+        """Perform forward."""
+
+        # conv layers
+        x = self.conv_layer(x)
+
+        # flatten
+        x = x.view(x.size(0), -1)
+
+        x1 = self.fc_spinal_layer1(x[:, 0:self.Half_width])
+        x2 = self.fc_spinal_layer2(torch.cat([x[:, self.Half_width:2 * self.Half_width], x1], dim=1))
+        x3 = self.fc_spinal_layer3(torch.cat([x[:, 0:self.Half_width], x2], dim=1))
+        x4 = self.fc_spinal_layer4(torch.cat([x[:, self.Half_width:2 * self.Half_width], x3], dim=1))
+
+        x = torch.cat([x1, x2], dim=1)
+        x = torch.cat([x, x3], dim=1)
+        x = torch.cat([x, x4], dim=1)
+
+        x = self.fc_out(x)
+
+        return x
+
+
+
 import torch.nn.functional as F
 # ref: https://www.kaggle.com/c/cassava-leaf-disease-classification/discussion/208239
 class SymmetricCrossEntropy(nn.Module):
