@@ -14,9 +14,10 @@ import timm
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+
 class StandardModel:
     def __init__(self, exp_dict):
-        if 'resnext' in exp_dict['model']['name'] :
+        if 'resnext' in exp_dict['model']['name']:
             self.network = Resnext(exp_dict)
         elif exp_dict['model']['name'] == 'resnet':
             self.network = Resnet(exp_dict).network
@@ -49,7 +50,7 @@ class StandardModel:
             loss_sum += float(loss)
             loss_samples += images.shape[0]
 
-        return {'train_loss':loss_sum / loss_samples}
+        return {'train_loss': loss_sum / loss_samples}
 
     @torch.no_grad()
     def val_on_loader(self, loader):
@@ -66,7 +67,7 @@ class StandardModel:
             acc_sum += float((preds.cpu() == labels).sum())
             acc_samples += labels.shape[0]
 
-        return {'val_acc': acc_sum/acc_samples }
+        return {'val_acc': acc_sum / acc_samples}
 
     @torch.no_grad()
     def test_on_loader(self, loader):
@@ -96,8 +97,11 @@ def get_optimizer(exp_dict, model):
         )
     elif opt_dict['name'] == 'adam':
         return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+    elif opt_dict['name'] == 'sam':
+        return SAM(model.parameters())
     else:
         return torch.optim.Adam(model.parameters(), lr=opt_dict['lr'])
+
 
 def get_criterion(exp_dict):
     if exp_dict['loss_func']['name'] == 'symmetric_cross_entropy':
@@ -109,9 +113,9 @@ def get_criterion(exp_dict):
     else:
         return nn.CrossEntropyLoss()
 
+
 # Networks
 # -------
-
 
 
 class Resnet():
@@ -153,6 +157,7 @@ class EfficientNet(nn.Module):
             nn.Linear(n_features, n_class, bias=True)
         )
         '''
+
     def forward(self, x):
         x = self.model(x)
         return x
@@ -237,8 +242,9 @@ class SpinalCNN(nn.Module):
         return x
 
 
-
 import torch.nn.functional as F
+
+
 # ref: https://www.kaggle.com/c/cassava-leaf-disease-classification/discussion/208239
 class SymmetricCrossEntropy(nn.Module):
 
@@ -251,7 +257,7 @@ class SymmetricCrossEntropy(nn.Module):
     def forward(self, logits, targets, reduction='mean'):
         onehot_targets = torch.eye(self.num_classes)[targets].cuda()
         ce_loss = F.cross_entropy(logits, targets, reduction=reduction)
-        rce_loss = (-onehot_targets*logits.softmax(1).clamp(1e-7, 1.0).log()).sum(1)
+        rce_loss = (-onehot_targets * logits.softmax(1).clamp(1e-7, 1.0).log()).sum(1)
         if reduction == 'mean':
             rce_loss = rce_loss.mean()
         elif reduction == 'sum':
@@ -284,7 +290,7 @@ class bi_tempered_logistic_loss(nn.Module):
         self.t2 = exp_dict['loss_func']['t2']
         self.num_iters = 5
 
-        self.reduction=exp_dict['loss_func']['reduction']
+        self.reduction = exp_dict['loss_func']['reduction']
 
     def forward(self, activations, labels, reduction='mean'):
         if len(labels.shape) < len(activations.shape):  # not one-hot
@@ -313,6 +319,7 @@ class bi_tempered_logistic_loss(nn.Module):
             return loss_values.sum()
         if reduction == 'mean':
             return loss_values.mean()
+
 
 def log_t(u, t):
     """Compute log_t for `u'."""
@@ -465,3 +472,61 @@ def tempered_softmax(activations, t, num_iters=5):
 
     normalization_constants = compute_normalization(activations, t, num_iters)
     return exp_t(activations - normalization_constants, t)
+
+
+class SAM(nn.Module):
+    def __init__(self, params, rho=0.05, **kwargs):
+        base_optimizer = torch.optim.SGD
+        super(SAM, self).__init__(params)
+
+        self.base_optimizer = base_optimizer
+        self.param_groups = self.base_optimizer.param_groups
+
+    @torch.no_grad()
+    def first_step(self, zero_grad=False):
+        grad_norm = self._grad_norm()
+        for group in self.param_groups:
+            scale = group["rho"] / (grad_norm + 1e-12)
+
+            for p in group["params"]:
+                if p.grad is None: continue
+                e_w = p.grad * scale.to(p)
+                p.add_(e_w)  # climb to the local maximum "w + e(w)"
+                self.state[p]["e_w"] = e_w
+
+        if zero_grad: self.zero_grad()
+
+    @torch.no_grad()
+    def second_step(self, zero_grad=False):
+        for group in self.param_groups:
+            for p in group["params"]:
+                if p.grad is None: continue
+                p.sub_(self.state[p]["e_w"])  # get back to "w" from "w + e(w)"
+
+        self.base_optimizer.step()  # do the actual "sharpness-aware" update
+
+        if zero_grad: self.zero_grad()
+
+    @torch.no_grad()
+    def step(self, closure=None):
+        assert closure is not None, "Sharpness Aware Minimization requires closure, but it was not provided"
+        closure = torch.enable_grad()(closure)  # the closure should do a full forward-backward pass
+
+        self.first_step(zero_grad=True)
+        closure()
+        self.second_step()
+
+    def _grad_norm(self):
+        shared_device = self.param_groups[0]["params"][
+            0].device  # put everything on the same device, in case of model parallelism
+        norm = torch.norm(
+            torch.stack([
+                p.grad.norm(p=2).to(shared_device)
+                for group in self.param_groups for p in group["params"]
+                if p.grad is not None
+            ]),
+            p=2
+        )
+        return norm
+
+
