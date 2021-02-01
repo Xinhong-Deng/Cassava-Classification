@@ -11,6 +11,7 @@ import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 import timm
+import torch.nn.functional as F
 
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -22,6 +23,8 @@ class StandardModel:
             self.network = Resnet(exp_dict).network
         elif 'efficientnet' in exp_dict['model']['name']:
             self.network = EfficientNet(exp_dict)
+        elif 'vit' in exp_dict['model']['name']:
+            self.network = ViT(exp_dict)
         else:
             self.network = Resnet(exp_dict).network
         self.network.to(DEVICE)
@@ -154,7 +157,6 @@ class EfficientNet(nn.Module):
         return x
 
 
-import torch.nn.functional as F
 # ref: https://www.kaggle.com/c/cassava-leaf-disease-classification/discussion/208239
 class SymmetricCrossEntropy(nn.Module):
 
@@ -173,3 +175,16 @@ class SymmetricCrossEntropy(nn.Module):
         elif reduction == 'sum':
             rce_loss = rce_loss.sum()
         return self.alpha * ce_loss + self.beta * rce_loss
+
+
+# https://www.kaggle.com/mobassir/vit-pytorch-xla-tpu-for-leaf-disease
+class ViT(nn.Module):
+    def __init__(self, exp_dict):
+        super().__init__()
+        self.model = timm.create_model(exp_dict['model']['name'], pretrained=True)
+        n_features = self.model.head.in_features
+        self.model.head = nn.Linear(n_features, 5)
+
+    def forward(self, x):
+        x = self.model(x)
+        return x

@@ -66,3 +66,13 @@ EXP_GROUPS['transform'] = hu.cartesian_exp_group({
                         'val_transform': {'name': 'tf2', 'im_size': 512},
 })
 # }) + efficientnet_smaller_batch
+
+EXP_GROUPS['vit'] = hu.cartesian_exp_group({
+                        'batch_size': 15,
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'vit_base_patch16_224'},
+                        'loss_func': cross_entropy,
+                        'max_epoch': [40],
+                        'train_transform': [{'name': tf_name, 'im_size': 224} for tf_name in ['tf1', 'tf3', 'default']],
+                        'val_transform': {'name': 'default', 'im_size': 224},
+})
