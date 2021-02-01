@@ -76,6 +76,13 @@ EXP_GROUPS['spiralcnn'] = hu.cartesian_exp_group({
                         'max_epoch': [50]
                         })
 
+EXP_GROUPS['sam'] = hu.cartesian_exp_group({
+                        'batch_size': 32,
+                        'opt': {'name': 'sam'},
+                        'loss_func': cross_entropy,
+                        'model': {'name': 'resnet'},
+                        'max_epoch': [50]
+                        })
 
 
 
