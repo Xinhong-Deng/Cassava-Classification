@@ -43,6 +43,7 @@ EXP_GROUPS['bitempered'] = hu.cartesian_exp_group({
                         'batch_size': 32,
                         'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
                         'model': {'name': 'resnext50_32x4d_ssl'},
+                        'loss_func': {'name': 'bitempered', 't1': 1, 't2': 1, 'reduction': 'mean'},
                         'max_epoch': [30]
                         })
 
@@ -67,6 +68,7 @@ EXP_GROUPS['transform'] = hu.cartesian_exp_group({
 })
 # }) + efficientnet_smaller_batch
 
+
 EXP_GROUPS['vit'] = hu.cartesian_exp_group({
                         'batch_size': 15,
                         'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
@@ -76,3 +78,21 @@ EXP_GROUPS['vit'] = hu.cartesian_exp_group({
                         'train_transform': [{'name': tf_name, 'im_size': 224} for tf_name in ['tf1', 'tf3', 'default']],
                         'val_transform': {'name': 'default', 'im_size': 224},
 })
+
+EXP_GROUPS['spiralcnn'] = hu.cartesian_exp_group({
+                        'batch_size': 32,
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'spiralcnn'},
+                        'loss_func': cross_entropy,
+                        'max_epoch': [50]
+                        })
+
+EXP_GROUPS['sam'] = hu.cartesian_exp_group({
+                        'batch_size': 32,
+                        'opt': {'name': 'sam'},
+                        'loss_func': cross_entropy,
+                        'model': {'name': 'resnet'},
+                        'max_epoch': [50]
+                        })
+
+
