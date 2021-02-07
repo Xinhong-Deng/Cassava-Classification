@@ -490,10 +490,11 @@ def tempered_softmax(activations, t, num_iters=5):
     return exp_t(activations - normalization_constants, t)
 
 
-class SAM(nn.Module):
+class SAM(torch.optim.Optimizer):
     def __init__(self, params, rho=0.05, **kwargs):
         base_optimizer = torch.optim.SGD
-        super(SAM, self).__init__(params)
+        default = dict(rho = rho, **kwargs)
+        super(SAM, self).__init__(params, default)
 
         self.base_optimizer = base_optimizer
         self.param_groups = self.base_optimizer.param_groups
