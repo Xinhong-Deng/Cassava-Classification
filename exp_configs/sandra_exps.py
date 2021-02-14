@@ -43,7 +43,7 @@ EXP_GROUPS['bitempered'] = hu.cartesian_exp_group({
                         'batch_size': 32,
                         'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
                         'model': {'name': 'resnext50_32x4d_ssl'},
-                        'loss_func': {'name': 'bitempered', 't1': 1, 't2': 1, 'reduction': 'mean'},
+                        'loss_func': {'name': 'bitempered', 't1': 0.2, 't2': 1.1, 'reduction': 'mean'},
                         'max_epoch': [30]
                         })
 
