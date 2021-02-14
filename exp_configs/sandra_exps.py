@@ -39,7 +39,7 @@ EXP_GROUPS['effnet2'] = hu.cartesian_exp_group({
                         'max_epoch': [100]
                         })
 
-EXP_GROUPS['bitempered'] = hu.cartesian_exp_group({
+EXP_GROUPS['bitemperednew'] = hu.cartesian_exp_group({
                         'batch_size': 32,
                         'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
                         'model': {'name': 'resnext50_32x4d_ssl'},
