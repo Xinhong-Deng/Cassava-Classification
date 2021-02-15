@@ -39,13 +39,7 @@ EXP_GROUPS['effnet2'] = hu.cartesian_exp_group({
                         'max_epoch': [100]
                         })
 
-EXP_GROUPS['bitemperednew'] = hu.cartesian_exp_group({
-                        'batch_size': 32,
-                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
-                        'model': {'name': 'resnext50_32x4d_ssl'},
-                        'loss_func': {'name': 'bitempered', 't1': 0.2, 't2': 1.1, 'reduction': 'mean'},
-                        'max_epoch': [30]
-                        })
+
 
 efficientnet_smaller_batch = [{
                         'batch_size': 20,
@@ -66,6 +60,16 @@ torchvision_transform = [{
                         'train_transform': {'name': 'centercrop', 'im_size': 256},
                         'val_transform': {'name': 'default', 'im_size': 256},
                         }]
+
+EXP_GROUPS['bitemperednew'] = hu.cartesian_exp_group({
+                        'batch_size': 32,
+                        'opt': {'name': 'adamW', 'lr': 0.0001, 'wd': 1e-6},
+                        'model': {'name': 'resnext50_32x4d_ssl'},
+                        'loss_func': {'name': 'bitempered', 't1': 0.2, 't2': 1.1, 'reduction': 'mean'},
+                        'max_epoch': [30],
+                        'train_transform': [{'name': tf_name, 'im_size': 512} for tf_name in ['tf1', 'tf3']],
+                        'val_transform': {'name': 'tf2', 'im_size': 512},
+}) + torchvision_transform
 
 EXP_GROUPS['transform'] = hu.cartesian_exp_group({
                         'batch_size': 20,
