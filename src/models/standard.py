@@ -30,7 +30,8 @@ class StandardModel:
             self.network = SpinalCNN(exp_dict)
         else:
             self.network = Resnet(exp_dict).network
-        self.network.to(DEVICE)
+        # self.network.to(DEVICE)
+        self.network = nn.DataParallel(self.network).to(DEVICE)
         self.opt = get_optimizer(exp_dict, self.network)
         self.criterion = get_criterion(exp_dict)
 
